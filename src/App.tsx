@@ -2,7 +2,7 @@
 import { easeInOut, motion, AnimatePresence } from 'framer-motion';
 import { useState, useEffect, useRef } from 'react';
 import { Analytics } from '@vercel/analytics/react';
-import { SpeedInsights } from "@vercel/speed-insights/next"
+import { SpeedInsights } from '@vercel/speed-insights/react';
 import { ImageWithFallback } from './components/figma/ImageWithFallback';
 import emailjs from '@emailjs/browser';
 import { Mail, Facebook, Instagram, ArrowLeft, Home, Trophy, Users } from 'lucide-react';
@@ -979,6 +979,7 @@ export default function App() {
         </motion.nav>
       )}
       <Analytics />
+      <SpeedInsights />
     </div>
   );
 }
