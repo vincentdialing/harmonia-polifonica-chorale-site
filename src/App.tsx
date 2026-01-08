@@ -1,9 +1,28 @@
 /// <reference types="vite/client" />
-import { easeInOut, motion } from 'framer-motion';
+import { easeInOut, motion, AnimatePresence } from 'framer-motion';
 import { useState, useEffect, useRef } from 'react';
 import { ImageWithFallback } from './components/figma/ImageWithFallback';
 import emailjs from '@emailjs/browser';
-import { Mail, Facebook, Instagram, ArrowLeft } from 'lucide-react';
+import { Mail, Facebook, Instagram, ArrowLeft, Home, Trophy, Users } from 'lucide-react';
+
+// Simple media-query hook
+function useMediaQuery(query: string) {
+  const [matches, setMatches] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia(query);
+    const onChange = () => setMatches(mq.matches);
+    onChange();
+    mq.addEventListener?.('change', onChange);
+    // @ts-expect-error: Safari fallback
+    mq.addListener?.(onChange);
+    return () => {
+      mq.removeEventListener?.('change', onChange);
+      // @ts-expect-error: Safari fallback
+      mq.removeListener?.(onChange);
+    };
+  }, [query]);
+  return matches;
+}
 
 export default function App() {
   const [activeSection, setActiveSection] = useState('Home');
@@ -11,8 +30,15 @@ export default function App() {
   const [userEmail, setUserEmail] = useState('');
   const [userName, setUserName] = useState('');
   const [userPhone, setUserPhone] = useState('');
+  const [currentHeroIndex, setCurrentHeroIndex] = useState(0);
   const formRef = useRef<HTMLFormElement | null>(null);
-  const navItems = ['Home', 'Highlights', 'About', 'Contact'];
+  const nav = [
+    { name: 'Home', icon: Home },
+    { name: 'Highlights', icon: Trophy },
+    { name: 'About', icon: Users },
+    { name: 'Contact', icon: Mail },
+  ];
+  const navItems = nav.map(n => n.name);
 
     // Optional: template to send an auto-reply to the sender (set in .env if desired)
     const replyTemplateId = import.meta.env.VITE_EMAILJS_REPLY_TEMPLATE_ID;
@@ -127,39 +153,49 @@ export default function App() {
   const AnimatedCounter = ({ target, label, duration = 2000, showPlus = false }: AnimatedCounterProps) => {
     const [count, setCount] = useState(0);
     const [started, setStarted] = useState(false);
+    const hasAnimated = useRef(false);
 
     useEffect(() => {
-      if (started) {
-        let startTime: number | undefined;
-        const animate = (timestamp: number) => {
-          if (!startTime) {
-            startTime = timestamp;
-            setCount(Math.floor(Math.random() * target)); // Start with random number
-          }
-          
-          const progress = Math.min((timestamp - startTime) / duration, 1);
-          const easeOutQuart = 1 - Math.pow(1 - progress, 4);
-          setCount(Math.floor(easeOutQuart * target));
-          
-          if (progress < 1) {
-            requestAnimationFrame(animate);
-          }
-        };
-        requestAnimationFrame(animate);
-      }
+      if (!started) return;
+      let rafId: number | null = null;
+      let startTime: number | undefined;
+      hasAnimated.current = true;
+
+      const animate = (timestamp: number) => {
+        if (!startTime) startTime = timestamp;
+
+        const progress = Math.min((timestamp - startTime) / duration, 1);
+        const easeOutQuart = 1 - Math.pow(1 - progress, 4);
+        setCount(Math.floor(easeOutQuart * target));
+
+        if (progress < 1) {
+          rafId = requestAnimationFrame(animate);
+        }
+      };
+
+      rafId = requestAnimationFrame(animate);
+
+      return () => {
+        if (rafId != null) cancelAnimationFrame(rafId);
+      };
     }, [started, target, duration]);
 
     return (
       <div
-        className="text-center bg-black/40 backdrop-blur-sm rounded-2xl p-6 border border-[#FF6A00]/20"
+        className="flex flex-col items-center justify-center h-40 sm:h-44 md:h-52 text-center bg-black/50 backdrop-blur-sm rounded-xl md:rounded-2xl p-4 md:p-6 border border-[#FF6A00]/30 shadow-lg shadow-[#FF6A00]/10"
       >
         <motion.div
           initial={{ opacity: 0, scale: 0.8 }}
           whileInView={{ opacity: 1, scale: 1 }}
-          onViewportEnter={() => setStarted(true)}
+          viewport={{ once: true }}
+          onViewportEnter={() => {
+            if (!hasAnimated.current) {
+              setStarted(true);
+            }
+          }}
         >
           <div 
-            className="text-4xl md:text-5xl font-bold text-white mb-2"
+            className="text-2xl sm:text-3xl md:text-5xl font-bold text-white mb-2"
             style={{
               textShadow: started ? "0 0 20px rgba(255,106,0,0.5)" : "none"
             }}
@@ -170,7 +206,7 @@ export default function App() {
                 {count >= target ? `${count}+` : count}
             */}
           </div>
-          <div className="text-white/80 text-sm uppercase tracking-wider">{label}</div>
+          <div className="text-white/80 text-sm sm:text-base uppercase tracking-wide">{label}</div>
         </motion.div>
       </div>
     );
@@ -224,7 +260,7 @@ export default function App() {
       id: 1,
       title: "Andrea O. Veneracion International Choral Festival 2025",
       award: "Manila, Philippines",
-      image: "/images/AOV25/main.jpg",
+      image: "/images/AOV25/main.webp",
       background: "from-black via-red-900/30 to-black",
       description: "The 6th Andrea O. Veneracion International Choral Festival, held at the Areté in Manila, gathered 34 choirs and over 1,200 singers from around the world in a celebration of choral excellence and cultural exchange. Among the participating ensembles, Harmonia Polifonica Chorale earned distinction by receiving Double Gold Diplomas in both the Folk Song and Musica Sacra categories. Beyond the accolades, this achievement reflects the dedication and perseverance of its student-singers, who balanced academic responsibilities with rigorous artistic preparation, embodying discipline, commitment, and passion for choral music.",
       stats: [
@@ -232,17 +268,17 @@ export default function App() {
         { label: "Gold Diploma", value: "Folk Song Category" },
       ],
       gallery: [
-        "/images/AOV25/1.jpg",
-        "/images/AOV25/2.jpg",
-        "/images/AOV25/3.jpg",
-        "/images/AOV25/4.jpg"
+        "/images/AOV25/1.webp",
+        "/images/AOV25/2.webp",
+        "/images/AOV25/3.webp",
+        "/images/AOV25/4.webp"
       ]
     },
     {
       id: 2,
       title: "Himig Handog International Choral Festival 2025",
       award: "Tagum City, Philippines",
-      image: "/images/M25/main.jpg",
+      image: "/images/M25/main.webp",
       background: "from-red-950 via-orange-900/40 to-black",
       description: "The Himig Handog International Choral Competition 2025 is an international choral festival that gathers choirs from different regions to celebrate excellence in choral performance, musical interpretation, and cultural expression. The event features multiple competition categories and culminates in a Grand Prix round. During the competition, Harmonia Polifonica Chorale achieved 3rd Place in the Grand Prix and received distinctions in the Mixed and Folklore categories, including recognition for musical interpretation. The event highlighted artistic discipline, collaboration, and the shared passion of participating ensembles for choral music.",
       stats: [
@@ -252,17 +288,17 @@ export default function App() {
         { label: "2nd Place", value: "Folklore Category" }
       ],
       gallery: [
-        "/images/M25/1 .jpg",
-        "/images/M25/3 .jpg",
-        "/images/M25/2 .jpg",
-        "/images/M25/4 .jpg"
+        "/images/M25/1.webp",
+        "/images/M25/3.webp",
+        "/images/M25/2.webp",
+        "/images/M25/4.webp"
       ]
     },
     {
       id: 3,
       title: "Himig Handog International Choral Festival 2024",
       award: "Tagum City, Philippines",
-      image: "/images/M24/main.jpg",
+      image: "/images/M24/main.webp",
       background: "from-red-950 via-orange-900/40 to-black",
       description: "The 21st Musikahan sa Tagum Festival Himig Handog International Choir Grand Prix 2024 is a choral competition that brings together local and international choirs in a celebration of musical excellence and cultural expression. As part of the festival, participating ensembles compete in various categories, culminating in the Grand Prix Finals. Harmonia Polifonica Chorale marked its return to Musikahan sa Tagum after its last appearance in 2016, participating in the competition and earning distinctions in the Mixed and Folk categories, as well as in the Grand Prix Finals. The event highlighted the choir’s renewed presence on the choral stage and its continued commitment to artistic growth and performance.",
       stats: [
@@ -271,31 +307,43 @@ export default function App() {
         { label: "4th Place", value: "Mixed Category" },
       ],
       gallery: [
-        "/images/M25/1 .jpg",
-        "/images/M25/3 .jpg",
-        "/images/M25/2 .jpg",
-        "/images/M25/4 .jpg"
+        "/images/M24/1.webp",
+        "/images/M24/3.webp",
+        "/images/M24/2.webp",
+        "/images/M24/4.webp"
       ]
     },
     {
       id: 4,
       title: "Andrea O. Veneracion International Choral Festival 2023",
       award: "Makati City, Philippines",
-      image: "/images/AOV23/main.jpg",
+      image: "/images/AOV23/main.webp",
       background: "from-red-950 via-orange-900/40 to-black",
-      description: "On July 23rd, Harmonia Polifonica Chorale (HPC) marked a significant milestone as it returned to the international stage at the Andrea O. Veneracion International Choral Festival in Makati City after several years of hiatus. Competing among choirs from various regions, HPC proudly earned Gold Diplomas in both the Folk Song and Mixed Choir categories, demonstrating the choir’s dedication, artistry, and resilience. This event celebrated not only the choir’s musical achievements but also its successful re-emergence on the international choral scene.",
+      description: "On July 23rd, Harmonia Polifonica Chorale marked a significant milestone as it returned to the international stage at the Andrea O. Veneracion International Choral Festival in Makati City after several years of hiatus. Competing among choirs from various regions, HPC proudly earned Gold Diplomas in both the Folk Song and Mixed Choir categories, demonstrating the choir’s dedication, artistry, and resilience. This event celebrated not only the choir’s musical achievements but also its successful re-emergence on the international choral scene.",
       stats: [
         { label: "Gold Diploma", value: "Mixed Choir Category" },
         { label: "Gold Diploma", value: "Folk Song Category" },
       ],
       gallery: [
-        "/images/AOV23/1.jpg",
-        "/images/AOV23/4.jpg",
-        "/images/AOV23/3.jpg",
-        "/images/AOV23/2.jpg"
+        "/images/AOV23/1.webp",
+        "/images/AOV23/4.webp",
+        "/images/AOV23/3.webp",
+        "/images/AOV23/2.webp"
       ]
     },
   ];
+
+  const heroImages = highlightsEvents.map((event) => event.image);
+
+  useEffect(() => {
+    if (!heroImages.length) return;
+
+    const interval = setInterval(() => {
+      setCurrentHeroIndex((prev) => (prev + 1) % heroImages.length);
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [heroImages.length]);
 
   interface Event {
     id: number;
@@ -341,11 +389,11 @@ export default function App() {
             {/* Large Image Block */}
             <motion.div variants={itemVariants} className="lg:col-span-2 lg:row-span-2">
               <div className="bg-black/60 backdrop-blur-sm rounded-2xl p-6 border border-[#FF6A00]/20 h-full">
-                <div className="h-80 lg:h-full rounded-xl overflow-hidden">
+                <div className="w-full lg:w-[90%] h-auto lg:h-[400px] rounded-2xl overflow-hidden mb-8 mx-auto">
                   <ImageWithFallback
                     src={event.image}
                     alt={event.title}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-700"
                   />
                 </div>
               </div>
@@ -410,35 +458,57 @@ export default function App() {
       case 'Home':
         return (
           <div className="min-h-screen flex items-center justify-center px-6 overflow-hidden">
+            <style>{`
+              @media (max-width: 768px) {
+                .mobile-center {
+                  display: flex !important;
+                  flex-direction: column !important;
+                  align-items: center !important;
+                  justify-content: center !important;
+                  text-align: center !important;
+                  width: 100% !important;
+                }
+                .mobile-center * {
+                  text-align: center !important;
+                  margin-left: auto !important;
+                  margin-right: auto !important;
+                }
+              }
+            `}</style>
             <motion.div
               variants={containerVariants}
               initial="hidden"
               animate="visible"
-              className="max-w-5xl mx-auto"
+              className="max-w-5xl mx-auto mobile-center"
             >
               {/* Semi-transparent black hero card */}
               <div className="bg-black/60 backdrop-blur-md rounded-2xl p-8 md:p-12 border border-[#FF6A00]/20 shadow-2xl shadow-[#FF6A00]/10 relative overflow-hidden">
                 
                 {/* Header + Intro Group */}
-                <motion.div variants={itemVariants} className="text-center mb-12">
-                  <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-white mb-8 tracking-tight">
+                <motion.div variants={itemVariants} className="text-center mb-30">
+                  <h1 className="text-3xl md:text-6xl lg:text-7xl font-bold text-white mb-4 tracking-tight">
                     Harmonia Polifonica Chorale
                   </h1>
                 </motion.div>
 
                 {/* Description + Button / Conductor Info Group */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
-                  <motion.div variants={itemVariants} className="space-y-6">
-                    <p className="text-lg md:text-xl text-white/90 leading-relaxed">
+                  <motion.div
+                    variants={itemVariants}
+                    className={`space-y-6 ${isDesktop ? 'text-left' : 'text-center flex flex-col items-center justify-center w-full'}`}
+                  >
+                    <p className="text-sm md:text-xl text-white/90 leading-fit">
                       At our core, we remain a group of friends, dreamers, and believers in music's ability to create memories that last a lifetime.
                     </p>
-                    <button 
-                      onClick={() => setActiveSection('About')}
-                      className="border-2 border-white text-white px-8 py-4 rounded-full hover:bg-[#FF6A00] hover:border-[#FF6A00] transition-all duration-300 shadow-lg shadow-[#FF6A00]/20 font-medium"
-                    >
-                      About Us
-                    </button>
-                    <p className="text-white/70">
+                    {!isMobile && (
+                      <button 
+                        onClick={() => setActiveSection('About')}
+                        className="border-2 border-white text-white px-8 py-4 rounded-full hover:bg-[#FF6A00] hover:border-[#FF6A00] transition-all duration-300 shadow-lg shadow-[#FF6A00]/20 font-medium"
+                      >
+                        About Us
+                      </button>
+                    )}
+                    <p className="text-xs text-white/70">
                       Based in Davao City, Philippines
                     </p>
                   </motion.div>
@@ -446,7 +516,7 @@ export default function App() {
                   <motion.div variants={itemVariants} className="flex justify-center lg:justify-end items-center">
                     <div className="flex items-center space-x-6">
                       <div className="text-center lg:text-right">
-                        <h2 className="text-2xl md:text-3xl font-semibold text-white mb-2">
+                        <h2 className="text-xl md:text-3xl font-semibold text-white mb-">
                           Mark Anthony Babalcon
                         </h2>
                         <p className="text-[#FF6A00] text-lg font-medium">
@@ -457,7 +527,7 @@ export default function App() {
                       {/* Logo placeholder: uses ImageWithFallback so it gracefully degrades if file missing */}
                       <div className="hidden lg:flex items-center justify-center">
                         <ImageWithFallback
-                          src="/images/logo.png"
+                          src="/images/Logo.png"
                           alt="Choir logo placeholder"
                           className="w-20 h-20 md:w-24 md:h-24 object-cover rounded-sm border-4 border-[#FF0066] bg-transparent"
                         />
@@ -468,12 +538,41 @@ export default function App() {
 
                 {/* Photo Group with vignette */}
                 <motion.div variants={itemVariants} className="relative">
-                  <div className="relative w-full h-64 md:h-80 rounded-2xl overflow-hidden">
-                    
-                    <ImageWithFallback
-                      src="/images/mainImage.png"
-                      className="w-full h-full object-cover"
-                    />
+                  <div className="group relative w-full h-64 md:h-80 rounded-2xl overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/20 z-10 pointer-events-none" />
+
+                    <AnimatePresence mode="wait">
+                      <motion.div
+                        key={heroImages[currentHeroIndex] || 'fallback-hero'}
+                        className="absolute inset-0 origin-center will-change-transform"
+                        initial={{ opacity: 0, scale: 1 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 1 }}
+                        whileHover={{ scale: 1.05 }}
+                        transition={{ duration: 1, ease: 'easeInOut' }}
+                      >
+                        <ImageWithFallback
+                          src={heroImages[currentHeroIndex] || '/images/mainImage.webp'}
+                          alt={`Highlight ${currentHeroIndex + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                      </motion.div>
+                    </AnimatePresence>
+
+                    {heroImages.length > 1 && (
+                      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex gap-2">
+                        {heroImages.map((_, index) => (
+                          <button
+                            key={index}
+                            onClick={() => setCurrentHeroIndex(index)}
+                            className={`h-2 w-2 rounded-full transition-all duration-300 ${
+                              index === currentHeroIndex ? 'bg-[#FF6A00] w-6' : 'bg-white/60 hover:bg-white'
+                            }`}
+                            aria-label={`Go to highlight ${index + 1}`}
+                          />
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </motion.div>
               </div>
@@ -495,10 +594,10 @@ export default function App() {
                 >
                   <motion.div 
                     variants={itemVariants}
-                    className={`w-full max-w-4xl bg-gradient-to-br ${event.background} rounded-2xl p-8 md:p-12 border border-[#FF6A00]/20 backdrop-blur-sm`}
+                    className={`w-full max-w-4xl bg-gradient-to-br ${event.background} rounded-2xl p-8 md:p-12 border border-[#FF6A00]/20 backdrop-blur-sm mb-8 lg:mb-16 lg:px-16`}
                   >
                     {/* Large centered photo */}
-                    <div className="w-full h-64 md:h-80 rounded-2xl overflow-hidden mb-8">
+                    <div className="w-full lg:w-[90%] h-auto lg:h-[400px] rounded-2xl overflow-hidden mb-8 mx-auto">
                       <ImageWithFallback
                         src={event.image}
                         alt={event.title}
@@ -507,13 +606,13 @@ export default function App() {
                     </div>
 
                     {/* Event title in bold white Poppins */}
-                    <h2 className="text-3xl md:text-5xl font-bold text-white text-center mb-4">
+                    <h2 className="text-2xl md:text-5xl font-bold text-white text-center mb-2 md:mb-6 lg:mb-8">
                       {event.title}
                     </h2>
 
-                    {/* Award/recognition label */}
-                    <div className="text-center mb-8">
-                      <span className="inline-block px-6 py-3 bg-[#FF6A00]/20 text-[#FF6A00] rounded-full text-lg border border-[#FF6A00]/30 font-medium">
+                    {/* Place Hosted */}
+                    <div className="text-center mb-2 md:mb-6 lg:mb-8">
+                      <span className="inline-block px-6 py-3 bg-[#FF6A00]/20 text-[#FF6A00] rounded-full text-lg border border-[#FF6A00]/30 font-medium mb-2 md:mb-6 lg:mb-8">
                         {event.award}
                       </span>
                     </div>
@@ -522,7 +621,7 @@ export default function App() {
                     <div className="text-center">
                       <button
                         onClick={() => setSelectedEventId(event.id)}
-                        className="bg-[#FF6A00] hover:bg-[#FF6A00]/80 text-white px-8 py-4 rounded-full font-semibold transition-all duration-300 shadow-lg shadow-[#FF6A00]/30 hover:shadow-[#FF6A00]/50"
+                        className="bg-[#FF6A00] hover:bg-[#FF6A00]/80 text-white px-8 py-4 rounded-full font-semibold transition-all duration-300 shadow-lg shadow-[#FF6A00]/30 hover:shadow-[#FF6A00]/50 mb-2 md:mb-6 lg:mb-8"
                       >
                         Click to Explore
                       </button>
@@ -548,13 +647,13 @@ export default function App() {
                 <h2 className="text-4xl md:text-6xl font-bold text-white mb-4">
                   About Us
                 </h2>
-                <p className="text-xl text-white/80 max-w-3xl mx-auto">
+                <p className="text-base md:text-xl text-white/80 max-w-3xl mx-auto">
                   A collective voices from Davao City, united by friendship and the timeless magic of music.
                 </p>
               </motion.div>
 
               {/* Animated Counters Group */}
-              <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
+              <motion.div variants={itemVariants} className="grid grid-cols-1 gap-4 sm:gap-5 md:grid-cols-3 md:gap-6 mb-12">
                 <AnimatedCounter target={20} label="Years Performing" />
                 <AnimatedCounter target={100} label="Live Performances" showPlus={true} />
                 <AnimatedCounter target={39} label="Passionate Voices" showPlus={true}/>
@@ -586,7 +685,7 @@ export default function App() {
                   <div className="bg-black/60 backdrop-blur-sm rounded-2xl p-4 border border-[#FF6A00]/20 h-full">
                     <div className="h-64 rounded-xl overflow-hidden">
                       <ImageWithFallback
-                        src="/images/about1.jpg"
+                        src="/images/about1.webp"
                         className="w-full h-full object-cover"
                       />
                     </div>
@@ -602,7 +701,7 @@ export default function App() {
                   <div className="bg-black/60 backdrop-blur-sm rounded-2xl p-4 border border-[#FF6A00]/20 h-full">
                     <div className="h-48 rounded-xl overflow-hidden">
                       <ImageWithFallback
-                        src="/images/about2.jpg"
+                        src="/images/about2.webp"
                         alt="Warm-up practice session"
                         className="w-full h-full object-cover"
                       />
@@ -644,9 +743,39 @@ export default function App() {
                 
                 {/* Header Section */}
                 <div className="p-8 border-b border-[#FF6A00]/20">
-                  <h1 className="text-4xl md:text-6xl font-bold text-white mb-4">
-                    BOOK US
-                  </h1>
+                  <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 mb-4">
+                    <h1 className="text-4xl md:text-6xl font-bold text-white">
+                      Book Us
+                    </h1>
+                    {/* Social Media Icons for Mobile/Tablet - aligned right */}
+                    <div className="flex lg:hidden space-x-4">
+                      <motion.a
+                        href="https://www.facebook.com/profile.php?id=100086396621687"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="group"
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        <div className="w-12 h-12 bg-black/40 backdrop-blur-sm rounded-full flex items-center justify-center border border-white/20 group-hover:border-[#FF6A00]/40 transition-all duration-300">
+                          <Facebook className="w-6 h-6 text-white group-hover:text-[#FF6A00] transition-colors duration-300" />
+                        </div>
+                      </motion.a>
+
+                      <motion.a
+                        href="https://www.instagram.com/usephpc/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="group"
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        <div className="w-12 h-12 bg-black/40 backdrop-blur-sm rounded-full flex items-center justify-center border border-white/20 group-hover:border-[#FF6A00]/40 transition-all duration-300">
+                          <Instagram className="w-6 h-6 text-white group-hover:text-[#FF6A00] transition-colors duration-300" />
+                        </div>
+                      </motion.a>
+                    </div>
+                  </div>
                   <div className="flex flex-col md:flex-row md:items-center md:space-x-8 space-y-2 md:space-y-0 text-white/80">
                     <span>hpcsingers@gmail.com</span>
                     <span className="hidden md:block">♦</span>
@@ -655,9 +784,9 @@ export default function App() {
                 </div>
 
                 {/* Split Content */}
-                <div className="grid grid-cols-1 lg:grid-cols-2">
+                <div className="grid grid-cols-1 md:grid-cols-2">
                   {/* Left: Contact Form */}
-                  <div className="p-8 lg:p-12">
+                  <div className="p-8 md:p-12">
                     <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
                       {/* Name Field */}
                       <div>
@@ -730,45 +859,16 @@ export default function App() {
                   </div>
 
                   {/* Right: Portrait and Social Media */}
-                  <div className="relative">
-                    <div className="h-full relative overflow-hidden lg:rounded-r-2xl">
+                  <div className="hidden md:block relative">
+                    <div className="h-full relative overflow-hidden md:rounded-r-2xl">
                       <ImageWithFallback
-                        src="/images/contactPortrait.jpg"
+                        src="/images/contactPortrait.webp"
                           alt="Harmonia Polifonica Chorale portrait"
-                          className="w-full h-full min-h-[500px] lg:min-h-[600px] object-cover"
+                          className="w-full h-full min-h-[500px] md:min-h-[600px] object-cover"
                         />
                       
                       {/* Dark overlay for better text visibility */}
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
-                      
-                      {/* Social Media Icons positioned at bottom right */}
-                      <div className="absolute bottom-8 right-8 flex space-x-4">
-                        <motion.a
-                          href="https://www.facebook.com/profile.php?id=100086396621687"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="group"
-                          whileHover={{ scale: 1.1 }}
-                          whileTap={{ scale: 0.95 }}
-                        >
-                          <div className="w-12 h-12 bg-black/40 backdrop-blur-sm rounded-full flex items-center justify-center border border-white/20 group-hover:border-[#FF6A00]/40 transition-all duration-300">
-                            <Facebook className="w-6 h-6 text-white group-hover:text-[#FF6A00] transition-colors duration-300" />
-                          </div>
-                        </motion.a>
-
-                        <motion.a
-                          href="https://www.instagram.com/usephpc/"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="group"
-                          whileHover={{ scale: 1.1 }}
-                          whileTap={{ scale: 0.95 }}
-                        >
-                          <div className="w-12 h-12 bg-black/40 backdrop-blur-sm rounded-full flex items-center justify-center border border-white/20 group-hover:border-[#FF6A00]/40 transition-all duration-300">
-                            <Instagram className="w-6 h-6 text-white group-hover:text-[#FF6A00] transition-colors duration-300" />
-                          </div>
-                        </motion.a>
-                      </div>
                     </div>
                   </div>
                 </div>
@@ -782,66 +882,97 @@ export default function App() {
     }
   };
 
+  // Add media query logic for mobile, tablet, and desktop views
+  const isMobile = useMediaQuery('(max-width: 768px)');
+  const isTablet = useMediaQuery('(min-width: 769px) and (max-width: 1024px)');
+  const isDesktop = useMediaQuery('(min-width: 1025px)');
+
   return (
-    <div 
+    <div
       className="min-h-screen w-full relative"
-      style={{
-        fontFamily: "'Poppins', sans-serif",
-        backgroundColor: '#0D0D0D'
-      }}
+      style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", backgroundColor: '#0D0D0D' }}
     >
-      {/* Poppins Font Import */}
-      <link 
-        href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap" 
-        rel="stylesheet" 
+      {/* Plus Jakarta Sans Font Import */}
+      <link
+        href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet"
       />
       
       {/* Background Image */}
       <div className="fixed inset-0">
-        <ImageWithFallback
-          src="/images/bgImage.jpg"
-          className="w-full h-full object-cover opacity-50"
-          alt="Background"
-        />
-        {/* Optional overlay for better readability */}
+        <ImageWithFallback src="/images/bgImage.webp" className="w-full h-full object-cover opacity-50" alt="Background" />
         <div className="absolute inset-0 bg-black/50"></div>
       </div>
       
       {/* Main Content */}
-      <div className="relative z-10">
+      <div className="relative z-10 pb-28 md:pb-0">
         {renderSection()}
       </div>
 
-      {/* Fixed Floating Footer Navigation */}
-      <motion.div
-        initial={{ opacity: 0, y: 100 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.5, duration: 0.6 }}
-        className="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-50"
-      >
-        <div className="bg-black/60 backdrop-blur-lg rounded-full p-2 border border-[#FF6A00]/20 shadow-2xl">
-          <div className="flex space-x-2">
-            {navItems.map((item) => (
-              <motion.button
-                key={item}
-                onClick={() => {
-                  setActiveSection(item);
-                  setSelectedEventId(null);
-                }}
-                className={`px-6 py-3 rounded-full text-sm font-semibold transition-all duration-300 ${
-                  activeSection === item
-                    ? 'bg-[#FF6A00] text-white shadow-lg shadow-[#FF6A00]/50'
-                    : 'text-white hover:bg-[#FF6A00]/10 hover:text-[#FF6A00] hover:shadow-lg hover:shadow-[#FF6A00]/20'
-                }`}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                {item}
-              </motion.button>
-            ))}
+      {/* One or the other, never both */}
+      {isDesktop ? (
+        <motion.nav
+          initial={{ opacity: 0, y: 100 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5, duration: 0.6 }}
+          className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50"
+          aria-hidden={false}
+        >
+          <div className="bg-black/60 backdrop-blur-lg rounded-full p-2 border border-[#FF6A00]/20 shadow-2xl">
+            <div className="flex space-x-2">
+              {nav.map(({ name }) => (
+                <motion.button
+                  key={name}
+                  onClick={() => { setActiveSection(name); setSelectedEventId(null); }}
+                  className={`px-6 py-3 rounded-full text-sm font-semibold transition-all duration-300 ${
+                    activeSection === name
+                      ? 'bg-[#FF6A00] text-white shadow-lg shadow-[#FF6A00]/50'
+                      : 'text-white hover:bg[#FF6A00]/10 hover:text-[#FF6A00] hover:shadow-lg hover:shadow-[#FF6A00]/20'
+                  }`}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  aria-current={activeSection === name ? 'page' : undefined}
+                >
+                  {name}
+                </motion.button>
+              ))}
+            </div>
           </div>
-        </div>
-      </motion.div>
+        </motion.nav>
+      ) : (
+        <motion.nav
+          initial={{ opacity: 0, y: 100 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.35, duration: 0.5 }}
+          className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50"
+          aria-hidden={false}
+        >
+          <div className="bg-black/60 backdrop-blur-lg rounded-full p-2 border border-[#FF6A00]/20 shadow-2xl">
+            <div className="flex space-x-2">
+              {nav.map(({ name, icon: Icon }) => {
+                const active = activeSection === name;
+                return (
+                  <motion.button
+                    key={name}
+                    onClick={() => { setActiveSection(name); setSelectedEventId(null); }}
+                    className={`px-6 py-3 rounded-full flex items-center justify-center transition-all duration-300 ${
+                      active
+                        ? 'bg-[#FF6A00] text-white shadow-lg shadow-[#FF6A00]/50'
+                        : 'text-white hover:bg-[#FF6A00]/10 hover:text-[#FF6A00] hover:shadow-lg hover:shadow-[#FF6A00]/20'
+                    }`}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    aria-current={active ? 'page' : undefined}
+                    aria-label={name}
+                  >
+                    <Icon className="h-6 w-6" />
+                  </motion.button>
+                );
+              })}
+            </div>
+          </div>
+        </motion.nav>
+      )}
     </div>
   );
 }
