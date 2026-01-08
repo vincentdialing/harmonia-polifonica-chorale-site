@@ -693,24 +693,31 @@ export default function App() {
               className="max-w-7xl mx-auto"
             >
               {/* Section Title */}
-              <motion.div variants={itemVariants} className="text-center mb-16">
+              <motion.div variants={itemVariants} className="text-center mb-8">
                 <h2 className="text-4xl md:text-6xl font-bold text-white mb-4">
                   About Us
                 </h2>
-                <p className="text-base md:text-xl text-white/80 max-w-3xl mx-auto">
+              </motion.div>
+
+              {/* Subtitle Box */}
+              <motion.div
+                variants={itemVariants}
+                className="bg-black/60 backdrop-blur-sm rounded-2xl border border-[#FF6A00]/20 px-6 py-8 text-center mb-8"
+              >
+                <p className="text-base md:text-xl text-white/80">
                   A collective voices from Davao City, united by friendship and the timeless magic of music.
                 </p>
               </motion.div>
 
               {/* Animated Counters Group */}
-              <motion.div variants={itemVariants} className="grid grid-cols-1 gap-4 sm:gap-5 md:grid-cols-3 md:gap-6 mb-12">
+              <motion.div variants={itemVariants} className="grid grid-cols-1 gap-4 sm:gap-5 md:grid-cols-3 md:gap-6 mb-8">
                 <AnimatedCounter target={20} label="Years Performing" />
                 <AnimatedCounter target={100} label="Live Performances" showPlus={true} />
                 <AnimatedCounter target={39} label="Passionate Voices" showPlus={true}/>
               </motion.div>
 
               {/* Scrolling Logo Rows Group */}
-              <motion.div variants={itemVariants} className="mb-16 bg-black/40 backdrop-blur-sm rounded-2xl border border-[#FF6A00]/20 py-8">
+              <motion.div variants={itemVariants} className="mb-8 bg-black/40 backdrop-blur-sm rounded-2xl border border-[#FF6A00]/20 py-8">
                 <ScrollingLogos direction="left" />
                 <ScrollingLogos direction="right" />
               </motion.div>
@@ -791,10 +798,17 @@ export default function App() {
               {/* Standalone Heading */}
               <motion.div variants={itemVariants} className="text-center">
                 <h1 className="text-4xl md:text-6xl font-bold text-white">Book Us</h1>
-                <p className="text-base md:text-xl text-white/80 mt-4 max-w-3xl mx-auto">
+              </motion.div>
+
+              {/* Main Description */}
+              <motion.div
+                variants={itemVariants}
+                className="bg-black/60 backdrop-blur-sm rounded-2xl border border-[#FF6A00]/20 px-6 py-8 text-center"
+              >
+                <p className="text-base md:text-xl text-white/80 mb-4">
                   We would be honored to add warmth and harmony to your occasion. We bring professionalism and heart to every performance, whether it's a mass, a reception, or a corporate gathering.
                 </p>
-                <p className="text-base md:text-xl text-white/90 mt-4 max-w-3xl mx-auto font-bold">
+                <p className="text-base md:text-xl lg:text-3xl text-white/90 font-bold">
                   Inquire today to save your date.
                 </p>
               </motion.div>
