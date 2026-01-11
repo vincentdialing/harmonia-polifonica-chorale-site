@@ -193,6 +193,7 @@ export default function App() {
   const [userEmail, setUserEmail] = useState('');
   const [userName, setUserName] = useState('');
   const [userPhone, setUserPhone] = useState('');
+  const [userMessage, setUserMessage] = useState('');
   const [currentHeroIndex, setCurrentHeroIndex] = useState(0);
   const [eventCarouselIndex, setEventCarouselIndex] = useState(0);
   const formRef = useRef<HTMLFormElement | null>(null);
@@ -227,6 +228,10 @@ export default function App() {
 
   // Update URL when section changes via UI navigation
   useEffect(() => {
+    // If we're on a deep-linked event page and the event hasn't been resolved yet,
+    // wait to avoid navigating back to /highlights prematurely on first load.
+    if (location.pathname.startsWith('/highlights/') && selectedEventId === null) return;
+
     const p = toPath(activeSection, selectedEventId);
     if (location.pathname !== p) navigate(p);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -246,6 +251,16 @@ export default function App() {
   const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
   if (!formRef.current) return;
+
+  const trimmedName = userName.trim();
+  const trimmedEmail = userEmail.trim();
+  const trimmedPhone = userPhone.trim();
+  const trimmedMessage = userMessage.trim();
+
+  if (!trimmedName || !trimmedEmail || !trimmedPhone || !trimmedMessage) {
+    alert('Please fill out all fields before submitting.');
+    return;
+  }
 
   const serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID;
   const templateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID;
@@ -269,6 +284,10 @@ export default function App() {
         // replace later with toast / modal
         alert("Simulated: Message sent!");
         formRef.current?.reset();
+        setUserName('');
+        setUserEmail('');
+        setUserPhone('');
+        setUserMessage('');
       }, 700);
       return;
     }
@@ -287,6 +306,10 @@ export default function App() {
 
     alert("Message sent successfully!");
     formRef.current.reset();
+  setUserName('');
+  setUserEmail('');
+  setUserPhone('');
+  setUserMessage('');
 
       // If a reply template is configured, send an automated acknowledgement to the sender
       if (replyTemplateId && userEmail) {
@@ -1116,6 +1139,7 @@ export default function App() {
                           placeholder="Juan Dela Cruz"
                           value={userName}
                           onChange={(e) => setUserName(e.target.value)}
+                          required
                           className="w-full bg-black/40 backdrop-blur-sm border border-[#FF6A00]/20 rounded-lg px-4 py-3 text-white placeholder-white/50 focus:border-[#FF6A00]/50 focus:outline-none transition-colors duration-300"
                         />
                         {/* keep a compatibility field if your EmailJS template expects `from_name` */}
@@ -1131,6 +1155,7 @@ export default function App() {
                           placeholder="email@address.com"
                           value={userEmail}
                           onChange={(e) => setUserEmail(e.target.value)}
+                          required
                           className="w-full bg-black/40 backdrop-blur-sm border border-[#FF6A00]/20 rounded-lg px-4 py-3 text-white placeholder-white/50 focus:border-[#FF6A00]/50 focus:outline-none transition-colors duration-300"
                         />
                         {/* Provide reply_to for EmailJS reply handling and compatibility with templates using `{{email}}` */}
@@ -1148,6 +1173,7 @@ export default function App() {
                           placeholder="0917 123 4567"
                           value={userPhone}
                           onChange={(e) => setUserPhone(e.target.value)}
+                          required
                           className="w-full bg-black/40 backdrop-blur-sm border border-[#FF6A00]/20 rounded-lg px-4 py-3 text-white placeholder-white/50 focus:border-[#FF6A00]/50 focus:outline-none transition-colors duration-300"
                         />
                         {/* Also include phone for templates expecting `phone_number` */}
@@ -1161,6 +1187,9 @@ export default function App() {
                           name="message"
                           rows={4}
                           placeholder="Hello..."
+                          value={userMessage}
+                          onChange={(e) => setUserMessage(e.target.value)}
+                          required
                           className="w-full bg-black/40 backdrop-blur-sm border border-[#FF6A00]/20 rounded-lg px-4 py-3 text-white placeholder-white/50 focus:border-[#FF6A00]/50 focus:outline-none transition-colors duration-300 resize-none"
                         />
                       </div>
